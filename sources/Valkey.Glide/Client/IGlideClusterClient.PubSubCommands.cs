@@ -4,15 +4,14 @@ using Valkey.Glide.Commands;
 
 namespace Valkey.Glide;
 
-// ATTENTION: Methods should only be added to this interface if they are implemented
-// by Valkey GLIDE clients but NOT by StackExchange.Redis databases. Methods implemented
-// by both should be added to <see cref="IPubSubClusterCommands"/> instead.
+/// ATTENTION: Methods should only be added to this interface if they are implemented
+/// by Valkey GLIDE clients but NOT by StackExchange.Redis databases. Methods implemented
+/// by both should be added to <see cref="IPubSubClusterCommands"/> instead.
 
 /// <summary>
-/// Cluster-specific pub/sub commands for Valkey GLIDE clients (sharded pub/sub).
+/// Pub/sub commands for Valkey GLIDE cluster client.
 /// </summary>
 /// <seealso href="https://valkey.io/commands/#pubsub">Valkey – Pub/Sub Commands</seealso>
-/// <seealso href="https://glide.valkey.io/how-to/publish-and-subscribe-messages/">Valkey GLIDE – Pub/Sub Messaging</seealso>
 public partial interface IGlideClusterClient : IPubSubClusterCommands
 {
     #region PublishCommands

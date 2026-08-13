@@ -7,12 +7,27 @@ using Valkey.Glide;
 
 internal class Utils
 {
-    public static (string host, ushort port) SplitEndpoint(EndPoint ep)
-        => ep switch
+    /// <summary>
+    /// Splits an address into host and port.
+    /// </summary>
+    /// <param name="address">The address to split.</param>
+    /// <returns>A tuple of (host, port).</returns>
+    public static (string Host, ushort Port) SplitAddress(string address)
+        => Format.TryParseEndPoint(address, out EndPoint? endpoint)
+            ? ((string Host, ushort Port))SplitEndpoint(endpoint)
+            : throw new FormatException($"Unsupported address: {address}");
+
+    /// <summary>
+    /// Splits an endpoint into host and port.
+    /// </summary>
+    /// <param name="endpoint">The endpoint to split.</param>
+    /// <returns>A tuple of (host, port).</returns>
+    public static (string host, ushort port) SplitEndpoint(EndPoint endpoint)
+        => endpoint switch
         {
             DnsEndPoint dns => (dns.Host, (ushort)dns.Port),
             IPEndPoint ip => (ip.Address.ToString(), (ushort)ip.Port),
-            _ => throw new ArgumentException($"Unsupported endpoint type: {ep.GetType()}"),
+            _ => throw new ArgumentException($"Unsupported endpoint type: {endpoint.GetType()}"),
         };
 
     /// <summary>

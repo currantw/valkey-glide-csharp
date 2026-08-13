@@ -1,9 +1,15 @@
 // Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0
 
+using Valkey.Glide.Commands.Options;
+
 namespace Valkey.Glide;
 
+/// ATTENTION: Methods should only be added to this interface if they are implemented
+/// by Valkey GLIDE clients but NOT by StackExchange.Redis databases. Methods implemented
+/// by both should be added to <see cref="Commands.IConnectionManagementBaseCommands"/> instead.
+
 /// <summary>
-/// Connection management commands for cluster clients.
+/// Connection management commands for Valkey GLIDE cluster client.
 /// </summary>
 /// <seealso href="https://valkey.io/commands/#connection">Valkey – Connection Management Commands</seealso>
 public partial interface IGlideClusterClient
@@ -40,6 +46,55 @@ public partial interface IGlideClusterClient
     /// </example>
     /// </remarks>
     Task<ClusterValue<long>> ClientIdAsync(Route route);
+
+    /// <summary>
+    /// Returns information about the current client connection to the server on all nodes.
+    /// </summary>
+    /// <seealso href="https://valkey.io/commands/client-info/">Valkey commands – CLIENT INFO</seealso>
+    /// <returns>A <see cref="ClusterValue{T}"/> containing the client info per node.</returns>
+    /// <remarks>
+    /// <example>
+    /// <code>
+    /// var info = (await clusterClient.ClientInfoAsync()).MultiValue;
+    /// foreach (var (node, ci) in info)
+    ///     Console.WriteLine($"{node}: {ci.Name}");
+    /// </code>
+    /// </example>
+    /// </remarks>
+    Task<ClusterValue<ClientInfo>> ClientInfoAsync();
+
+    /// <summary>
+    /// Returns information about all client connections to the server on all nodes.
+    /// </summary>
+    /// <seealso href="https://valkey.io/commands/client-list/">Valkey commands – CLIENT LIST</seealso>
+    /// <returns>A <see cref="ClusterValue{T}"/> containing the connected clients per node.</returns>
+    /// <remarks>
+    /// <example>
+    /// <code>
+    /// var clients = (await clusterClient.ClientListAsync()).MultiValue;
+    /// foreach (var (node, list) in clients)
+    ///     Console.WriteLine($"{node}: {list.Length} clients");
+    /// </code>
+    /// </example>
+    /// </remarks>
+    Task<ClusterValue<ClientInfo[]>> ClientListAsync();
+
+    /// <summary>
+    /// Returns information about all client connections to the server
+    /// on all nodes matching the given filter options.
+    /// </summary>
+    /// <seealso href="https://valkey.io/commands/client-list/">Valkey commands – CLIENT LIST</seealso>
+    /// <param name="options">The filter options specifying which clients to return.</param>
+    /// <returns>A <see cref="ClusterValue{T}"/> containing the matching clients per node.</returns>
+    /// <remarks>
+    /// <example>
+    /// <code>
+    /// var options = new ClientFilterOptions().WithType(ClientType.Normal);
+    /// var clients = (await clusterClient.ClientListAsync(options)).MultiValue;
+    /// </code>
+    /// </example>
+    /// </remarks>
+    Task<ClusterValue<ClientInfo[]>> ClientListAsync(ClientFilterOptions options);
 
     /// <summary>
     /// Returns information about the current client connection's use of the

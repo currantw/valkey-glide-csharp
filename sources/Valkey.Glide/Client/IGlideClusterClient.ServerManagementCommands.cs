@@ -6,9 +6,9 @@ using static Valkey.Glide.Commands.Options.InfoOptions;
 
 namespace Valkey.Glide;
 
-// ATTENTION: Methods should only be added to this interface if they are implemented by Valkey GLIDE clients
-// but NOT by StackExchange.Redis databases. Methods implemented by both should be added to the corresponding
-// Commands interface instead.
+/// ATTENTION: Methods should only be added to this interface if they are implemented
+/// by Valkey GLIDE clients but NOT by StackExchange.Redis databases. Methods implemented
+/// by both should be added to <see cref="Commands.IServerManagementClusterCommands"/> instead.
 
 /// <summary>
 /// Server management commands for Valkey GLIDE cluster client.

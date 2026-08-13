@@ -13,4 +13,8 @@ public static class Constants
     public const string HostnameNoTls = "valkey.glide.test.no_tls.com";
     public const string Ipv4Address = "127.0.0.1";
     public const string Ipv6Address = "::1";
+
+    // Client library.
+    public const string LibraryName = "GlideC#";
+    public static readonly string LibraryVersion = Environment.GetEnvironmentVariable("GLIDE_VERSION") ?? "unknown";
 }

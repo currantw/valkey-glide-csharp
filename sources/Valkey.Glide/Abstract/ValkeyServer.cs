@@ -198,6 +198,13 @@ internal partial class ValkeyServer(Database conn, EndPoint endpoint) : IServer
     }
 
     /// <inheritdoc/>
+    public async Task<ClientInfo[]> ClientListAsync(CommandFlags flags = CommandFlags.None)
+    {
+        GuardClauses.ThrowIfCommandFlags(flags);
+        return await _conn.Command(Request.ClientList(), MakeRoute());
+    }
+
+    /// <inheritdoc/>
     public async Task<KeyValuePair<string, string>[]> ConfigGetAsync(ValkeyValue pattern = default, CommandFlags flags = CommandFlags.None)
     {
         GuardClauses.ThrowIfCommandFlags(flags);

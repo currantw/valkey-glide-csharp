@@ -204,6 +204,63 @@ internal partial class Request
             } : null;
 
     /// <summary>
+    /// Returns a required <see langword="uint"/> value from the given response dictionary.
+    /// </summary>
+    private static uint GetUInt(Dictionary<GlideString, object> map, string key)
+        => TryGetUInt(map, key) ?? throw new RequestException($"Response missing required field '{key}'");
+
+    /// <summary>
+    /// Returns an optional <see langword="uint"/> value from the given response dictionary.
+    /// </summary>
+    private static uint? TryGetUInt(Dictionary<GlideString, object> map, string key)
+        => map.TryGetValue(key, out var value)
+            ? value switch
+            {
+                long l when l >= 0 => (uint)l,
+                long => null,
+                GlideString gs => uint.TryParse(gs.ToString(), out uint result) ? result : null,
+                _ => throw new RequestException($"Response field '{key}' expected uint or string, got {value.GetType()}"),
+            } : null;
+
+    /// <summary>
+    /// Returns a required <see langword="ulong"/> value from the given response dictionary.
+    /// </summary>
+    private static ulong GetULong(Dictionary<GlideString, object> map, string key)
+        => TryGetULong(map, key) ?? throw new RequestException($"Response missing required field '{key}'");
+
+    /// <summary>
+    /// Returns an optional <see langword="ulong"/> value from the given response dictionary.
+    /// </summary>
+    private static ulong? TryGetULong(Dictionary<GlideString, object> map, string key)
+        => map.TryGetValue(key, out var value)
+            ? value switch
+            {
+                long l when l >= 0 => (ulong)l,
+                long => null,
+                GlideString gs => ulong.TryParse(gs.ToString(), out ulong result) ? result : null,
+                _ => throw new RequestException($"Response field '{key}' expected ulong or string, got {value.GetType()}"),
+            } : null;
+
+    /// <summary>
+    /// Returns a required <see langword="ushort"/> value from the given response dictionary.
+    /// </summary>
+    private static ushort GetUShort(Dictionary<GlideString, object> map, string key)
+        => TryGetUShort(map, key) ?? throw new RequestException($"Response missing required field '{key}'");
+
+    /// <summary>
+    /// Returns an optional <see langword="ushort"/> value from the given response dictionary.
+    /// </summary>
+    private static ushort? TryGetUShort(Dictionary<GlideString, object> map, string key)
+        => map.TryGetValue(key, out var value)
+            ? value switch
+            {
+                long l when l >= 0 => (ushort)l,
+                long => null,
+                GlideString gs => ushort.TryParse(gs.ToString(), out ushort result) ? result : null,
+                _ => throw new RequestException($"Response field '{key}' expected ushort or string, got {value.GetType()}"),
+            } : null;
+
+    /// <summary>
     /// Returns a required <see langword="string"/> value from the given response dictionary.
     /// </summary>
     private static string GetString(Dictionary<GlideString, object> map, string key)

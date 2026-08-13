@@ -70,10 +70,8 @@ public class ServerTests(TestConfiguration config)
         var target = ConnectionMultiplexer.Connect(conn.RawConfig).GetServers().First();
         var targetId = await target.ClientIdAsync();
 
-        // TODO #414: Update to use ClientInfoAsync() once available on IServer.
-        var info = (await target.ExecuteAsync("CLIENT", ["INFO"])).AsString()!;
-        var addr = info.Split(' ').First(f => f.StartsWith("addr=")).Split('=')[1];
-        var endpoint = IPEndPoint.Parse(addr);
+        var (host, port) = (await target.ClientListAsync()).First(c => c.Id == (ulong)targetId).Address;
+        var endpoint = new IPEndPoint(IPAddress.Parse(host), port);
 
         var server = conn.GetServers().First();
         await server.ClientKillAsync(endpoint);
@@ -113,6 +111,20 @@ public class ServerTests(TestConfiguration config)
 
         var filter = new ClientKillFilter().WithId(id).WithSkipMe(false);
         Assert.Equal(1, await server.ClientKillAsync(filter));
+    }
+
+    #endregion
+    #region ClientListAsync
+
+    [Theory(DisableDiscoveryEnumeration = true)]
+    [MemberData(nameof(Config.TestConnections), MemberType = typeof(TestConfiguration))]
+    public async Task ClientListAsync_ReturnsConnectedClients(ConnectionMultiplexer conn, bool _)
+    {
+        foreach (var server in conn.GetServers())
+        {
+            var clients = await server.ClientListAsync();
+            Assert.Contains(clients, c => c.LibraryName == "GlideC#");
+        }
     }
 
     #endregion

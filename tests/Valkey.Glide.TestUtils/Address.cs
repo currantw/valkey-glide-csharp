@@ -23,4 +23,19 @@ public record class Address(string Host, ushort Port)
 
         return addresses;
     }
+
+    public static bool operator ==((string Host, ushort Port) tuple, Address address)
+        => address.Host == tuple.Host && address.Port == tuple.Port;
+
+    public static bool operator !=((string Host, ushort Port) tuple, Address address)
+        => !(tuple == address);
+
+    public static bool operator ==(Address address, (string Host, ushort Port) tuple)
+        => address.Host == tuple.Host && address.Port == tuple.Port;
+
+    public static bool operator !=(Address address, (string Host, ushort Port) tuple)
+        => !(address == tuple);
+
+    public static implicit operator (string Host, ushort Port)(Address address)
+        => (address.Host, address.Port);
 }

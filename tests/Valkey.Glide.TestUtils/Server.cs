@@ -56,9 +56,14 @@ public abstract class Server : IDisposable
     #region Public Properties
 
     /// <summary>
-    /// Address of the server.
+    /// The primary server adddress.
     /// </summary>
-    public Address Address { get; init; }
+    public Address Address => Addresses[0];
+
+    /// <summary>
+    /// All server addresses.
+    /// </summary>
+    public IReadOnlyList<Address> Addresses { get; init; }
 
     /// <summary>
     /// Indicates whether the server uses TLS.
@@ -92,12 +97,12 @@ public abstract class Server : IDisposable
     {
         UseTls = useTls;
 
-        Address = ServerManager.StartServer(
+        Addresses = [.. ServerManager.StartServer(
             name: _name,
             useClusterMode: useClusterMode,
             useTls: UseTls,
             replicaCount: replicaCount,
-            host: host).First();
+            host: host)];
 
         if (UseTls)
         {
@@ -132,8 +137,11 @@ public abstract class Server : IDisposable
     /// <summary>
     /// Builds and returns a client for this server.
     /// </summary>
-    /// <param name="host">Optional hostname.</param>
-    public abstract Task<BaseClient> CreateClientAsync(string? host = null);
+    /// <param name="host">Optional host name.</param>
+    /// <param name="name">Optional client name.</param>
+    public abstract Task<BaseClient> CreateClientAsync(
+        string? host = null,
+        string? name = null);
 
     /// <summary>
     /// Sets authentication credentials for the default user.
@@ -218,15 +226,20 @@ public sealed class ClusterServer(bool useTls = false, string? host = null) : Se
             username: _username,
             password: _password);
 
-    /// <inheritdoc cref="Server.CreateClientAsync(string?)"/>
-    public override async Task<BaseClient> CreateClientAsync(string? host = null)
-        => await CreateClusterClientAsync(host);
+    /// <inheritdoc cref="Server.CreateClientAsync(string?, string?)"/>
+    public override async Task<BaseClient> CreateClientAsync(
+        string? host = null,
+        string? name = null)
+        => await CreateClusterClientAsync(host, name);
 
     /// <summary>
     /// Builds and returns a cluster client for this server.
     /// </summary>
     /// <param name="host">Optional hostname.</param>
-    public async Task<GlideClusterClient> CreateClusterClientAsync(string? host = null)
+    /// <param name="name">Optional client name.</param>
+    public async Task<GlideClusterClient> CreateClusterClientAsync(
+        string? host = null,
+        string? name = null)
     {
         var builder = new ClusterClientConfigurationBuilder()
             .WithAddress(host ?? Address.Host, Address.Port);
@@ -240,6 +253,11 @@ public sealed class ClusterServer(bool useTls = false, string? host = null) : Se
         if (_password != null)
         {
             _ = builder.WithAuthentication(password: _password);
+        }
+
+        if (name != null)
+        {
+            _ = builder.WithClientName(name);
         }
 
         return await CreateClientAsync(()
@@ -304,15 +322,20 @@ public sealed class StandaloneServer(
             username: _username,
             password: _password);
 
-    /// <inheritdoc cref="Server.CreateClientAsync(string?)"/>
-    public override async Task<BaseClient> CreateClientAsync(string? host = null)
-        => await CreateStandaloneClientAsync(host);
+    /// <inheritdoc cref="Server.CreateClientAsync(string?, string?)"/>
+    public override async Task<BaseClient> CreateClientAsync(
+        string? host = null,
+        string? name = null)
+        => await CreateStandaloneClientAsync(host, name);
 
     /// <summary>
     /// Builds and returns a standalone client for this server.
     /// </summary>
     /// <param name="host">Optional hostname.</param>
-    public async Task<GlideClient> CreateStandaloneClientAsync(string? host = null)
+    /// <param name="name">Optional client name.</param>
+    public async Task<GlideClient> CreateStandaloneClientAsync(
+        string? host = null,
+        string? name = null)
     {
         var builder = new StandaloneClientConfigurationBuilder()
             .WithAddress(host ?? Address.Host, Address.Port);
@@ -326,6 +349,11 @@ public sealed class StandaloneServer(
         if (_password != null)
         {
             _ = builder.WithAuthentication(password: _password);
+        }
+
+        if (name != null)
+        {
+            _ = builder.WithClientName(name);
         }
 
         return await CreateClientAsync(()

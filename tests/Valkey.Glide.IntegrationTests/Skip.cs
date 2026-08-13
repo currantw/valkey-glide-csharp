@@ -9,11 +9,24 @@ namespace Valkey.Glide.IntegrationTests;
 /// </summary>
 internal static class Skip
 {
-    #region Version Checks
+    #region Version Constants
 
     private static readonly Version Valkey7_0 = new("7.0.0");
+    private static readonly Version Valkey7_2 = new("7.2.0");
+    private static readonly Version Valkey8_0 = new("8.0.0");
     private static readonly Version Valkey8_1 = new("8.1.0");
     private static readonly Version Valkey9_0 = new("9.0.0");
+
+    #endregion
+    #region Version Checks
+
+    public static bool IsClientCapabilitiesSupported => TestConfiguration.SERVER_VERSION >= Valkey8_1;
+    public static bool IsClientLibraryInfoSupported => TestConfiguration.SERVER_VERSION >= Valkey7_2;
+    public static bool IsClientProtocolSupported => TestConfiguration.SERVER_VERSION >= Valkey7_0;
+    public static bool IsClientTotalsSupported => TestConfiguration.SERVER_VERSION >= Valkey8_0;
+
+    #endregion
+    #region Version Checks
 
     /// <summary>
     /// Skips the test if background save cancel commands are not supported.
@@ -22,6 +35,14 @@ internal static class Skip
         => Assert.SkipWhen(
             TestConfiguration.SERVER_VERSION < Valkey8_1,
             "Background save cancel commands require Valkey 8.1+");
+
+    /// <summary>
+    /// Skips the test if client library info (lib-name, lib-ver) is not supported.
+    /// </summary>
+    public static void IfClientLibraryInfoNotSupported()
+        => Assert.SkipWhen(
+            !IsClientLibraryInfoSupported,
+            "Client library info (lib-name, lib-ver) requires Valkey 7.2+");
 
     /// <summary>
     /// Skips the test if bit index type commands are not supported.

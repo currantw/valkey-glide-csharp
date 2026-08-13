@@ -193,11 +193,29 @@ public class StandaloneClientTests(TestConfiguration config)
 
     [Theory(DisableDiscoveryEnumeration = true)]
     [MemberData(nameof(Config.TestStandaloneClients), MemberType = typeof(TestConfiguration))]
-    public async Task TestClientGetName(GlideClient client)
+    public async Task TestClientGetName_Default(GlideClient client)
+        => Assert.Equal(ValkeyValue.Null, await client.ClientGetNameAsync());
+
+    [Fact]
+    public async Task TestClientGetName_WithClientName()
     {
-        // CLIENT GETNAME should return ValkeyValue.Null initially (no name set)
-        ValkeyValue clientName = await client.ClientGetNameAsync();
-        Assert.Equal(ValkeyValue.Null, clientName);
+        var name = "CLIENT-NAME";
+        var config = TestConfiguration.DefaultClientConfig().WithClientName(name).Build();
+
+        using var client = await GlideClient.CreateClient(config);
+        Assert.Equal(name, await client.ClientGetNameAsync());
+    }
+
+    [Fact]
+    public async Task TestLibrary_Default()
+    {
+        Skip.IfClientLibraryInfoNotSupported();
+
+        await using var client = TestConfiguration.DefaultStandaloneClient();
+        var info = await client.ClientInfoAsync();
+
+        Assert.Equal(Constants.LibraryName, info.LibraryName);
+        Assert.Equal(Constants.LibraryVersion, info.LibraryVersion);
     }
 
     [Theory(DisableDiscoveryEnumeration = true)]

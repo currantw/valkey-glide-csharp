@@ -1,7 +1,6 @@
 // Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0
 
 using System.Diagnostics;
-using System.Net;
 
 using Valkey.Glide.Commands.Options;
 using Valkey.Glide.TestUtils;
@@ -17,58 +16,26 @@ namespace Valkey.Glide.IntegrationTests;
 [CollectionDefinition(DisableParallelization = true)]
 public class ConnectionManagementCommandTests(ServerFixture fixture) : IClassFixture<ServerFixture>
 {
-    #region Constants
-
-    // TODO #414: Remove when ClientInfoAsync implemented.
-    private static readonly GlideString[] InfoCommand = ["CLIENT", "INFO"];
-
-    // Library version is set dynamically by the CD workflow,
-    // and defaults to "unknown" for local and CI builds.
-    private static readonly string LibVersion =
-        Environment.GetEnvironmentVariable("GLIDE_VERSION") ?? "unknown";
-
-    #endregion
     #region ClientInfoAsync
 
-    // TODO #414: Update when ClientInfoAsync implemented.
     [Theory]
     [MemberData(nameof(Data.ClusterMode), MemberType = typeof(Data))]
-    public async Task TestClientInfo_ReportsCorrectLibNameAndVersion(bool clusterMode)
+    public async Task ClientInfoAsync_Succeeds(bool clusterMode)
     {
-        await using var client = await fixture.GetServer(clusterMode).CreateClientAsync();
+        var name = "CLIENT-NAME";
+        await using var client = await fixture.GetServer(clusterMode).CreateClientAsync(name);
 
-        var result = client is GlideClusterClient clusterClient
-            ? (await clusterClient.CustomCommand(InfoCommand, Route.Random)).SingleValue
-            : await ((GlideClient)client).CustomCommand(InfoCommand);
-        var info = result!.ToString()!;
+        var infos = client is GlideClusterClient clusterClient
+            ? (await clusterClient.ClientInfoAsync()).MultiValue.Values.ToArray()
+            : [await ((GlideClient)client).ClientInfoAsync()];
 
-        Assert.Contains("lib-name=GlideC#", info);
-        Assert.Contains($"lib-ver={LibVersion}", info);
-        Assert.Contains("name= ", info);
-    }
-
-    // TODO #414: Update when ClientInfoAsync implemented.
-    [Theory]
-    [MemberData(nameof(Data.ClusterMode), MemberType = typeof(Data))]
-    public async Task TestClientInfo_WithClientName_ReportsName(bool clusterMode)
-    {
-        const string clientName = "client";
-
-        await using BaseClient client = clusterMode
-            ? await GlideClusterClient.CreateClient(
-                fixture.ClusterServer.CreateConfigBuilder()
-                    .WithClientName(clientName)
-                    .Build())
-            : await GlideClient.CreateClient(
-                fixture.StandaloneServer.CreateConfigBuilder()
-                    .WithClientName(clientName)
-                    .Build());
-
-        var result = client is GlideClusterClient clusterClient
-            ? (await clusterClient.CustomCommand(InfoCommand, Route.Random)).SingleValue
-            : await ((GlideClient)client).CustomCommand(InfoCommand);
-
-        Assert.Contains($"name={clientName} ", result!.ToString()!);
+        Assert.NotEmpty(infos);
+        foreach (var info in infos)
+        {
+            /// See <see cref="Glide.Test.UnitTests.ConnectionManagementCommandTests"/>
+            /// for comprehensive command converter unit tests.
+            Assert.Equal(name, info.Name);
+        }
     }
 
     #endregion
@@ -88,14 +55,12 @@ public class ConnectionManagementCommandTests(ServerFixture fixture) : IClassFix
     {
         await using var client = await fixture.GetServer(clusterMode).CreateClientAsync();
 
-        // TODO #414: Update to use ClientInfoAsync()
         var info = client is GlideClusterClient clusterClient
-            ? (await clusterClient.CustomCommand(InfoCommand, Route.Random)).SingleValue!.ToString()!
-            : (await ((GlideClient)client).CustomCommand(InfoCommand))!.ToString()!;
-        var addr = info.Split(' ').First(f => f.StartsWith("addr=")).Split('=')[1];
-        var endpoint = IPEndPoint.Parse(addr);
+            ? (await clusterClient.ClientInfoAsync()).MultiValue.Values.First()
+            : await ((GlideClient)client).ClientInfoAsync();
+        var (host, port) = info.Address;
 
-        var options = new ClientFilterOptions().WithAddress(endpoint.Address.ToString(), (ushort)endpoint.Port).WithSkipMe(false);
+        var options = new ClientFilterOptions().WithAddress(host, port).WithSkipMe(false);
         Assert.Equal(1, await client.ClientKillAsync(options));
     }
 
@@ -121,6 +86,42 @@ public class ConnectionManagementCommandTests(ServerFixture fixture) : IClassFix
 #pragma warning restore CS0618
         var options = new ClientFilterOptions().WithId(id).WithSkipMe(false);
         Assert.Equal(1, await client.ClientKillAsync(options));
+    }
+
+    #endregion
+    #region ClientListAsync
+
+    [Theory]
+    [MemberData(nameof(Data.ClusterMode), MemberType = typeof(Data))]
+    public async Task ClientListAsync_ReturnsAllAddresses(bool clusterMode)
+    {
+        var server = fixture.GetServer(clusterMode);
+        await using var client = await server.CreateClientAsync();
+
+        var infos = await GetClientInfos(client);
+
+        foreach (var address in server.Addresses)
+        {
+            Assert.Contains(infos, c => c.LocalAddress == address);
+        }
+    }
+
+    [Theory]
+    [MemberData(nameof(Data.ClusterMode), MemberType = typeof(Data))]
+    public async Task ClientListAsync_WithAddressFilter_ReturnsAddress(bool clusterMode)
+    {
+        var server = fixture.GetServer(clusterMode);
+        await using var client = await server.CreateClientAsync();
+
+        var address = server.Address;
+        var options = new ClientFilterOptions().WithLocalAddress(address.Host, address.Port);
+        var infos = await GetClientInfos(client, options);
+
+        Assert.NotEmpty(infos);
+        foreach (var info in infos)
+        {
+            Assert.Equal(address, info.LocalAddress);
+        }
     }
 
     #endregion
@@ -294,20 +295,6 @@ public class ConnectionManagementCommandTests(ServerFixture fixture) : IClassFix
         }
     }
 
-    private static void AssertTrackingInfoOff(ClientTrackingInfo info)
-    {
-        Assert.Equivalent(new HashSet<string> { "off" }, info.Flags);
-        Assert.Equal(-1, info.Redirect);
-        Assert.Empty(info.Prefixes);
-    }
-
-    private static void AssertTrackingInfoOn(ClientTrackingInfo info)
-    {
-        Assert.Equivalent(new HashSet<string> { "on", "bcast" }, info.Flags);
-        Assert.Equal(0, info.Redirect);
-        Assert.Equivalent(new HashSet<string> { "" }, info.Prefixes);
-    }
-
     #endregion
     #region ResetAsync
 
@@ -336,6 +323,42 @@ public class ConnectionManagementCommandTests(ServerFixture fixture) : IClassFix
         // Verify tracking is disabled after reset.
         var infoAfter = await client.ClientTrackingInfoAsync();
         Assert.Contains("off", infoAfter.Flags);
+    }
+
+    #endregion
+    #region Helpers
+
+    private static void AssertTrackingInfoOff(ClientTrackingInfo info)
+    {
+        Assert.Equivalent(new HashSet<string> { "off" }, info.Flags);
+        Assert.Equal(-1, info.Redirect);
+        Assert.Empty(info.Prefixes);
+    }
+
+    private static void AssertTrackingInfoOn(ClientTrackingInfo info)
+    {
+        Assert.Equivalent(new HashSet<string> { "on", "bcast" }, info.Flags);
+        Assert.Equal(0, info.Redirect);
+        Assert.Equivalent(new HashSet<string> { "" }, info.Prefixes);
+    }
+
+    /// <summary>
+    /// Returns all client infos for the given client.
+    /// </summary>
+    private static async Task<ClientInfo[]> GetClientInfos(BaseClient client, ClientFilterOptions? options = null)
+    {
+        if (client is GlideClusterClient clusterClient)
+        {
+            var result = options is null
+                ? await clusterClient.ClientListAsync()
+                : await clusterClient.ClientListAsync(options);
+            return [.. result.MultiValue.Values.SelectMany(static c => c)];
+        }
+
+        var standaloneClient = (GlideClient)client;
+        return options is null
+            ? await standaloneClient.ClientListAsync()
+            : await standaloneClient.ClientListAsync(options);
     }
 
     #endregion

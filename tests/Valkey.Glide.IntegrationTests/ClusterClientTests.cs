@@ -400,31 +400,51 @@ public class ClusterClientTests(TestConfiguration config)
 
     [Theory(DisableDiscoveryEnumeration = true)]
     [MemberData(nameof(Config.TestClusterClients), MemberType = typeof(TestConfiguration))]
-    public async Task TestClientGetName(GlideClusterClient client)
+    public async Task TestClientGetName_Default(GlideClusterClient client)
     {
-        // CLIENT GETNAME should return ValkeyValue null initially (no name set)
-        ValkeyValue clientName = await client.ClientGetNameAsync();
-        Assert.Equal(ValkeyValue.Null, clientName);
+        // Default route.
+        var name = await client.ClientGetNameAsync();
+        Assert.Equal(ValkeyValue.Null, name);
+
+        // All nodes route.
+        var names = (await client.ClientGetNameAsync(AllNodes)).MultiValue.Values.ToArray();
+
+        Assert.NotEmpty(names);
+        Assert.All(names, n => Assert.Equal(ValkeyValue.Null, n));
     }
 
-    [Theory(DisableDiscoveryEnumeration = true)]
-    [MemberData(nameof(Config.TestClusterClients), MemberType = typeof(TestConfiguration))]
-    public async Task TestClientGetName_WithRoute(GlideClusterClient client)
+    [Fact]
+    public async Task TestClientGetName_WithClientName()
     {
-        // Test CLIENT GETNAME with single node routing
-        var singleNodeResult = await client.ClientGetNameAsync(Route.Random);
-        Assert.True(singleNodeResult.HasSingleData);
-        Assert.Equal(ValkeyValue.Null, singleNodeResult.SingleValue);
+        var expected = "CLIENT-NAME";
+        using var client = await GlideClusterClient.CreateClient(
+            TestConfiguration.DefaultClusterClientConfig().WithClientName(expected).Build());
 
-        // Test CLIENT GETNAME with all nodes routing
-        var allNodesResult = await client.ClientGetNameAsync(AllNodes);
-        Assert.True(allNodesResult.HasMultiData);
-        Assert.NotEmpty(allNodesResult.MultiValue);
+        // Default route.
+        var name = await client.ClientGetNameAsync();
+        Assert.Equal(expected, name);
 
-        foreach (var kvp in allNodesResult.MultiValue)
+        // All nodes route.
+        var names = (await client.ClientGetNameAsync(AllNodes)).MultiValue.Values.ToArray();
+
+        Assert.NotEmpty(names);
+        Assert.All(names, n => Assert.Equal(expected, n));
+    }
+
+    [Fact]
+    public async Task TestLibrary_Default()
+    {
+        Skip.IfClientLibraryInfoNotSupported();
+
+        await using var client = TestConfiguration.DefaultClusterClient();
+        var infos = (await client.ClientInfoAsync()).MultiValue.Values.ToArray();
+
+        Assert.NotEmpty(infos);
+        Assert.All(infos, info =>
         {
-            Assert.Equal(ValkeyValue.Null, kvp.Value); // No name should be set initially on any node
-        }
+            Assert.Equal(Constants.LibraryName, info.LibraryName);
+            Assert.Equal(Constants.LibraryVersion, info.LibraryVersion);
+        });
     }
 
     [Theory(DisableDiscoveryEnumeration = true)]

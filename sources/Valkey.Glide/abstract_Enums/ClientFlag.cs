@@ -95,7 +95,7 @@ public enum ClientFlag
     UnixSocket = 'U',
 
     /// <summary>
-    /// Client is in a <c>MULTI</c>/<c>EXEC</c> context.
+    /// Client is in a transaction context.
     /// </summary>
     Multi = 'x',
 

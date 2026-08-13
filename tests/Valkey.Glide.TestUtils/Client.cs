@@ -16,17 +16,13 @@ public static class Client
     /// <returns>A task that resolves to the total number of client connections.</returns>
     public static async Task<int> GetConnectionCount(BaseClient client)
     {
-        GlideString[] clientListCommandArgs = ["CLIENT", "LIST"];
         if (client is GlideClient standaloneClient)
         {
-            object? result = await standaloneClient.CustomCommand(clientListCommandArgs);
-            return result!.ToString()!.Split('\n', StringSplitOptions.RemoveEmptyEntries).Length;
+            return (await standaloneClient.ClientListAsync()).Length;
         }
         else if (client is GlideClusterClient clusterClient)
         {
-            ClusterValue<object?> result = await clusterClient.CustomCommand(clientListCommandArgs, new Route.AllPrimariesRoute());
-            return result!.MultiValue.Values.Sum(static nodeResult =>
-                nodeResult!.ToString()!.Split('\n', StringSplitOptions.RemoveEmptyEntries).Length);
+            return (await clusterClient.ClientListAsync()).MultiValue.Values.Sum(static clients => clients.Length);
         }
         else
         {

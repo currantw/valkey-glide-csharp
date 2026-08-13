@@ -282,6 +282,24 @@ public partial interface IServer : IRedisAsync
     Task ClientKillAsync(EndPoint endpoint, CommandFlags flags = CommandFlags.None);
 
     /// <summary>
+    /// Returns information about all client connections to the server.
+    /// </summary>
+    /// <seealso href="https://valkey.io/commands/client-list/"/>
+    /// <param name="flags">Command flags (currently not supported by GLIDE).</param>
+    /// <exception cref="NotImplementedException">Thrown if <paramref name="flags"/> is not <see cref="CommandFlags.None"/>.</exception>
+    /// <returns>Information about all client connections.</returns>
+    /// <remarks>
+    /// <example>
+    /// <code>
+    /// var clients = await server.ClientListAsync();
+    /// foreach (var c in clients)
+    ///     Console.WriteLine($"Client Name: {c.Name}");
+    /// </code>
+    /// </example>
+    /// </remarks>
+    Task<ClientInfo[]> ClientListAsync(CommandFlags flags = CommandFlags.None);
+
+    /// <summary>
     /// Kills client connections matching the given filter parameters.
     /// </summary>
     /// <seealso href="https://valkey.io/commands/client-kill"/>
